@@ -1,25 +1,84 @@
 import os
+import re
+import json
+import discord
 from dotenv import load_dotenv
 from google.cloud import secretmanager
 from google.api_core.exceptions import NotFound, PermissionDenied
 
-load_dotenv(".env.local")  # dev convenience
+# Load .env for local dev
+load_dotenv(".env.local")
 
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "war-bot")
+PROJECT_SECRET_ID = os.getenv("GOOGLE_CLOUD_PROJECT_SECRET_ID", "war-bot")
+
+def decode_and_normalise_secret(raw: bytes) -> str:
+    """
+    Try UTF-8 first, then UTF-16-LE with BOM, then fall back to 'latin-1'.
+    Strip BOM, nulls, and whitespace/newlines that often sneak in from Windows.
+    """
+    text = None
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = raw.decode("utf-16")  # handles FF FE BOM like your sample
+        except UnicodeDecodeError:
+            text = raw.decode("latin-1")  # last resort so we can clean it
+
+    # Remove BOM if present and any NULs from UTF-16 artifacting
+    text = text.replace("\ufeff", "").replace("\x00", "")
+    # Trim CRLF/newlines/spaces/tabs
+    text = text.strip()
+
+    return text
 
 def get_secret(secret_id: str, version_id: str = "latest") -> str:
+    """Fetches a secret string from Google Secret Manager and normalises it."""
     client = secretmanager.SecretManagerServiceClient()
-    name = f"projects/{PROJECT_ID}/secrets/{secret_id}/versions/{version_id}"
+    name = f"projects/{PROJECT_SECRET_ID}/secrets/{secret_id}/versions/{version_id}"
     try:
         resp = client.access_secret_version(request={"name": name})
-        return resp.payload.data.decode("utf-8")
+        secret_text = decode_and_normalise_secret(resp.payload.data)
+
+        # (Optional) sanity check: Discord bot tokens are three dot-separated parts.
+        if secret_id.startswith("discord_"):
+            if secret_text.count(".") != 2:
+                # Provide a helpful error if it looks wrong (e.g., OAuth client secret instead of bot token)
+                raise RuntimeError(
+                    f"Secret '{secret_id}' does not look like a Discord bot token "
+                    "(expected three dot-separated parts). Check you copied the Bot token from the "
+                    "Developer Portal > Bot > Reset Token."
+                )
+        return secret_text
     except PermissionDenied:
-        raise RuntimeError(f"No access to secret '{secret_id}'. Check IAM for the service account.")
+        raise RuntimeError(f"No access to secret '{secret_id}'. Check IAM permissions.")
     except NotFound:
         raise RuntimeError(f"Secret or version not found: {name}")
 
+# Select environment (local or prod)
 env = os.getenv("PROJECT_ENVIRONMENT", "local")
 print("Environment:", env)
 
-secret = get_secret("discord_key_local" if env == "local" else "discord_key_prod")
-print(secret)
+# Fetch the Discord bot token
+token = get_secret("discord_key_local" if env == "local" else "discord_key_prod")
+
+# --- Discord Bot Setup ---
+intents = discord.Intents.default()
+bot = discord.Client(intents=intents)
+tree = discord.app_commands.CommandTree(bot)
+
+# IMPORTANT: ensure GUILD_ID is an int
+GUILD_ID_ENV = os.getenv("GUILD_ID")
+GUILD_ID = discord.Object(id=int(GUILD_ID_ENV) if GUILD_ID_ENV else 1436538029316636705)
+
+@tree.command(name="hello", description="Say hello to the bot!", guild=GUILD_ID)
+async def hello(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Hello, {interaction.user.display_name}! 👋")
+
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+    await tree.sync(guild=GUILD_ID)  # instant in this guild
+    print(f"Slash commands synced to guild {GUILD_ID.id}")
+
+bot.run(token)
