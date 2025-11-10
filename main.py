@@ -76,8 +76,39 @@ async def hello(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user}")
+
+    print(f"Logged in as {bot.user}")
     await tree.sync(guild=GUILD_ID)  # instant in this guild
     print(f"Slash commands synced to guild {GUILD_ID.id}")
+
+    rt_war_channel_id = int(os.getenv("RT_WAR_ID"))
+    ct_war_channel_id = int(os.getenv("CT_WAR_ID"))
+
+    rt_channel = bot.get_channel(rt_war_channel_id)
+    ct_channel = bot.get_channel(ct_war_channel_id)
+
+    async def clear_and_post(channel: discord.TextChannel, placeholder: str):
+        """Helper function to clear and then post in a channel."""
+        try:
+            deleted = await channel.purge()
+            print(f"🧹 Cleared {len(deleted)} messages in {channel.name}")
+        except discord.Forbidden:
+            print(f"⚠️ No permission to delete messages in {channel.name}")
+        except discord.HTTPException as e:
+            print(f"⚠️ Error clearing {channel.name}: {e}")
+
+        # Send the placeholder message
+        await channel.send(placeholder)
+        print(f"Sent placeholder in {channel.name}")
+
+    if rt_channel:
+        await clear_and_post(rt_channel, "Placeholder for RT War")
+    else:
+        print("RT war channel not found — check the ID or bot permissions.")
+
+    if ct_channel:
+        await clear_and_post(ct_channel, "Placeholder for CT War")
+    else:
+        print("CT war channel not found — check the ID or bot permissions.")
 
 bot.run(token)
