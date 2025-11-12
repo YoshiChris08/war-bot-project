@@ -66,7 +66,7 @@ class CreateNewWar(Extension):
         creation_player = Player(ctx.author.display_name, role="Runner", ally=False)
         creation_war = War(war_type=track_label, team_name=team_name)
         creation_war.lineup.append(creation_player)
-        billboard_path = (os.path.join(BASE_DIR, 'temp', 'ct-billboard.json') if is_ct else os.path.join(BASE_DIR, 'temp', 'rt-billboard.json'))
+        billboard_path = (os.path.join(BASE_DIR, 'temp', 'ct-billboard.json') if is_ct else os.path.join(BASE_DIR, 'temp', 'billboard-data', 'rt-billboard.json'))
 
 
         # Load existing data (if any)
