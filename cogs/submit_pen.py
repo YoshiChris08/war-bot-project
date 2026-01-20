@@ -18,7 +18,7 @@ from interactions import (
 
 load_dotenv(".env.local")
 
-# Global config
+# NEEDS TO BE CHANGED FOR REF ROLES
 global_ping_role = [
     907468726146854973,
     1153207371976409109,
@@ -128,13 +128,13 @@ class PenSubmit(Extension):
     ):
         await ctx.defer(ephemeral=True)
 
-        # Allowed servers
+        # Allowed servers ***NEEDS TO BE CHANGED TO ALLOW SUBMISSIONS FROM ANY SERVER AND ROUTE TO GSC OR ONLY ALLOW SUBMISSIONS IN GSC***
         allowed_guilds = [814572061510729758, 888071905184198736]
         if ctx.guild_id not in allowed_guilds:
             await ctx.send("You are not allowed to use this command!", ephemeral=True)
             return
 
-        # Server-specific config
+        # Server-specific config (NEEDS TO BE ROUTED TO GSC / ANY OFFICIAL HUBS REFS SEE, CHANGE THESE VALUES)
         if ctx.guild_id == 814572061510729758:
             ping_role = 1153207371976409109
             spec_channel_id = 1323062737076621384 if type == "scrim" else 814572061510729761
@@ -194,6 +194,10 @@ class PenSubmit(Extension):
         await ctx.message.edit(embeds=[penalty.build_embed()])
         await ctx.send("Your vote has been removed.", ephemeral=True)
 
+
+    # ======================
+    # Penalty Votes Checker ***MAY NEED TO BE REMOVED, DONT KNOW IF IT CAN GO IN THIS COG***
+    # ======================
     @slash_command(
         name="pen_votes",
         description="Checks who voted on the most recent GSC penalty!",
