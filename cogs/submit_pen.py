@@ -18,8 +18,32 @@ from interactions import (
 
 load_dotenv(".env.local")
 
-# NEEDS TO BE CHANGED FOR REF ROLES
-global_ping_role = [
+
+def parse_int_env(env_name):
+    raw = os.getenv(env_name)
+    if raw is None:
+        return None
+    try:
+        return int(raw.strip())
+    except ValueError:
+        return None
+
+
+def parse_int_list_env(env_name):
+    values = []
+    raw = os.getenv(env_name, "")
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            values.append(int(item))
+        except ValueError:
+            continue
+    return values
+
+# Use env-based referee role IDs when available to avoid hardcoded guild-specific config.
+global_ping_role = parse_int_list_env("REF_ROLE_IDS") or [
     907468726146854973,
     1153207371976409109,
     888289090695479357,
@@ -128,19 +152,27 @@ class PenSubmit(Extension):
     ):
         await ctx.defer(ephemeral=True)
 
-        # Allowed servers ***NEEDS TO BE CHANGED TO ALLOW SUBMISSIONS FROM ANY SERVER AND ROUTE TO GSC OR ONLY ALLOW SUBMISSIONS IN GSC***
-        allowed_guilds = [814572061510729758, 888071905184198736]
-        if ctx.guild_id not in allowed_guilds:
-            await ctx.send("You are not allowed to use this command!", ephemeral=True)
+        # Use configured channels/role IDs instead of hardcoded guild-specific values.
+        spec_channel_id = (
+            parse_int_env("SCRIM_PEN_CHANNEL")
+            if type == "scrim"
+            else parse_int_env("GSC_PEN_CHANNEL")
+        )
+        ref_role_id = parse_int_env("REF_ID")
+
+        if not spec_channel_id:
+            await ctx.send(
+                "Config error: SCRIM_PEN_CHANNEL / GSC_PEN_CHANNEL is not set.",
+                ephemeral=True,
+            )
             return
 
-        # Server-specific config (NEEDS TO BE ROUTED TO GSC / ANY OFFICIAL HUBS REFS SEE, CHANGE THESE VALUES)
-        if ctx.guild_id == 814572061510729758:
-            ping_role = 1153207371976409109
-            spec_channel_id = 1323062737076621384 if type == "scrim" else 814572061510729761
-        elif ctx.guild_id == 888071905184198736:
-            ping_role = 907468726146854973
-            spec_channel_id = 907079860856455209 if type == "scrim" else 951530514689429544
+        if not ref_role_id:
+            await ctx.send(
+                "Config error: REF_ID (referee ping role ID) is not set.",
+                ephemeral=True,
+            )
+            return
 
         channel = await self.bot.fetch_channel(spec_channel_id)
 
@@ -149,7 +181,7 @@ class PenSubmit(Extension):
             for opt in PenaltyVote.OPTIONS
         ] + [Button(style=ButtonStyle.RED, label="Remove Vote", custom_id="remove_button")]
 
-        message = await channel.send(content=f"<@&{ping_role}>", components=buttons)
+        message = await channel.send(content=f"<@&{ref_role_id}>", components=buttons)
 
         vote_manager.create(message.id, title, f"Download: {attachment}", ctx.author.mention)
         await message.edit(embeds=[vote_manager.get(message.id).build_embed()])
