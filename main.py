@@ -163,7 +163,12 @@ async def on_startup():
 # Run
 # ---------------------------
 if __name__ == "__main__":
-    bot.load_extension("cogs.create_new_war")
+    bot.load_extension("cogs.setup")
+    bot.load_extension("cogs.team")
+    bot.load_extension("cogs.queue")
+    bot.load_extension("cogs.queue_interactions")
+    bot.load_extension("cogs.war_view")
+    bot.load_extension("cogs.war_interactions")
     bot.load_extension("cogs.submit_pen")
     bot.load_extension("cogs.post_war_billboard")
     bot.start()

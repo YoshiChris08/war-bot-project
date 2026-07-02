@@ -210,4 +210,7 @@ __marimo__/
 .env.local
 sa-key.json
 temp/billboard-data
+temp/queue-parties.json
+temp/teams.json
+temp/guild-config.json
 temp/lineups

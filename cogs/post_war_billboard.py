@@ -1,124 +1,56 @@
-import os
-import json
 import interactions
 from dotenv import load_dotenv
-from interactions import Task, IntervalTrigger, Extension, Client, listen, Button, ButtonStyle, ActionRow
+from interactions import Extension, Client, listen, Task, IntervalTrigger
+
+from utils.billboard_store import load_wars
+from utils.config import CT_CHANNEL_ID, RT_CHANNEL_ID
+from utils.embeds import build_war_embed
+from utils.guild_config import list_configured_billboard_channels
+from utils.war_buttons import build_war_buttons
 
 load_dotenv(".env.local")
 
-# ---------------------------
-# Channel IDs
-# ---------------------------
-RT_CHANNEL_ID = int(os.getenv("RT_WAR_ID")) if os.getenv("RT_WAR_ID") else None
-CT_CHANNEL_ID = int(os.getenv("CT_WAR_ID")) if os.getenv("CT_WAR_ID") else None
 
-# ---------------------------
-# Paths
-# ---------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BILLBOARD_DIR = os.path.join(BASE_DIR, "temp", "billboard-data")
+def _collect_channel_ids(war_type: str) -> list[int]:
+    """Hub env channels plus any per-guild configured billboard channels."""
+    channel_ids = []
+    hub_id = CT_CHANNEL_ID if war_type == "ct" else RT_CHANNEL_ID
+    if hub_id:
+        channel_ids.append(hub_id)
+
+    for channel_id in list_configured_billboard_channels(war_type):
+        if channel_id not in channel_ids:
+            channel_ids.append(channel_id)
+
+    return channel_ids
 
 
 class PostWarBillboard(Extension):
     def __init__(self, bot: Client):
         self.bot = bot
-
-        # ✅ In-memory cache:
-        # war_id -> { "data": war_dict, "message_id": int }
+        # war_id -> { "data": war_dict, "messages": { channel_id: message_id } }
         self.rt_wars = {}
         self.ct_wars = {}
-
-        # ✅ Prevents startup race-condition deletes
         self.ready = False
 
-    # ---------------------------
-    # JSON Loader
-    # ---------------------------
+    def _cache_for(self, war_type: str) -> dict:
+        return self.ct_wars if war_type == "ct" else self.rt_wars
+
     def load_json(self, war_type: str):
-        path = os.path.join(BILLBOARD_DIR, f"{war_type}-billboard.json")
+        return [
+            war for war in load_wars(war_type)
+            if war.get("status") in ("open", "matched")
+        ]
 
-        if not os.path.exists(path):
-            return []
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data if isinstance(data, list) else []
-        except json.JSONDecodeError:
-            print(f"⚠️ {war_type.upper()} billboard JSON is corrupted.")
-            return []
-        except Exception as e:
-            print(f"❌ Failed to load {war_type} billboard: {e}")
-            return []
-
-    # ---------------------------
-    # Embed Formatter
-    # ---------------------------
-    def format_war(self, war: dict) -> interactions.Embed:
-        lineup = war.get("lineup", [])
-
-        # Build lineup text
-        if lineup:
-            lineup_text = "\n".join(
-                f"- **{p.get('player', 'Unknown')}** ({p.get('role', 'Unknown')})"
-                for p in lineup
-            )
-        else:
-            lineup_text = "No players yet."
-
-        # Color by war type
-        war_type = war.get("war_type", "RT").upper()
-        color = 0x2ECC71 if war_type == "RT" else 0x9B59B6
-
-        embed = interactions.Embed(
-            title=f"{war.get('team_name', 'Unknown Team')} searching ({war_type})",
-            description=f"**War ID:** `{war.get('war_id')}`",
-            color=color
-        )
-
-        embed.add_field(
-            name="⏰ Time Searching For",
-            value=f"`{war.get('start_time', 'Unknown')}`",
-            inline=False
-        )
-
-        embed.add_field(
-            name=f"👥 Lineup ({len(lineup)})",
-            value=lineup_text,
-            inline=False
-        )
-
-        embed.set_footer(text="Auto-updated War Billboard")
-
-        return embed
-
-    # Create buttons used to accept or deny wars. For now just a placeholder.
-    def build_war_buttons(self, war_id: str):
-        button = Button(
-            style=ButtonStyle.SUCCESS,
-            label="Accept War (Placeholder)",
-            custom_id=f"accept_war:{war_id}",  # unique per war
-            disabled=False
-        )
-
-        return ActionRow(button)
-
-        
-
-    # ---------------------------
-    # Startup Sync
-    # ---------------------------
     @listen()
     async def on_startup(self):
         print("✅ Billboard system starting...")
 
-        if RT_CHANNEL_ID:
-            await self.initial_sync("rt", RT_CHANNEL_ID, self.rt_wars)
+        for war_type in ("rt", "ct"):
+            cache = self._cache_for(war_type)
+            for channel_id in _collect_channel_ids(war_type):
+                await self.initial_sync(war_type, channel_id, cache)
 
-        if CT_CHANNEL_ID:
-            await self.initial_sync("ct", CT_CHANNEL_ID, self.ct_wars)
-
-        # ✅ Unlock deletion after initial sync completes
         self.ready = True
 
         if not self.sync_billboards.running:
@@ -126,88 +58,95 @@ class PostWarBillboard(Extension):
             print("✅ Billboard diff-sync task running")
 
     async def initial_sync(self, war_type: str, channel_id: int, cache: dict):
-        channel = await self.bot.fetch_channel(channel_id)
+        try:
+            channel = await self.bot.fetch_channel(channel_id)
+        except Exception as exc:
+            print(f"❌ Cannot access channel {channel_id}: {exc}")
+            return
+
         wars = self.load_json(war_type)
 
         for war in wars:
-            embed = self.format_war(war)
-            components = self.build_war_buttons(war["war_id"])
+            war_id = war["war_id"]
+            embed = build_war_embed(war)
+            components = build_war_buttons(war)
             msg = await channel.send(embeds=embed, components=components)
 
-            cache[war["war_id"]] = {
-                "data": war,
-                "message_id": msg.id
-            }
+            if war_id not in cache:
+                cache[war_id] = {"data": war, "messages": {}}
+            cache[war_id]["data"] = war
+            cache[war_id]["messages"][channel_id] = msg.id
 
-        print(f"✅ Initial {war_type.upper()} billboard synced")
+        print(f"✅ Initial {war_type.upper()} billboard synced for channel {channel_id}")
 
-    # ---------------------------
-    # Diff-Based Live Sync
-    # ---------------------------
     @Task.create(IntervalTrigger(seconds=30))
     async def sync_billboards(self):
-        await self.sync_one("rt", RT_CHANNEL_ID, self.rt_wars)
-        await self.sync_one("ct", CT_CHANNEL_ID, self.ct_wars)
+        for war_type in ("rt", "ct"):
+            cache = self._cache_for(war_type)
+            for channel_id in _collect_channel_ids(war_type):
+                await self.sync_one(war_type, channel_id, cache)
 
     async def sync_one(self, war_type: str, channel_id: int, cache: dict):
         if not channel_id:
             return
 
-        channel = await self.bot.fetch_channel(channel_id)
+        try:
+            channel = await self.bot.fetch_channel(channel_id)
+        except Exception as exc:
+            print(f"❌ Cannot access channel {channel_id}: {exc}")
+            return
+
         latest_wars = self.load_json(war_type)
         latest_by_id = {w["war_id"]: w for w in latest_wars}
 
-        # ---------------------------
-        # NEW or UPDATED wars
-        # ---------------------------
         for war_id, war in latest_by_id.items():
-
-            # ✅ NEW WAR → create message
             if war_id not in cache:
-                embed = self.format_war(war)
-                components = self.build_war_buttons(war["war_id"])
+                embed = build_war_embed(war)
+                components = build_war_buttons(war)
                 msg = await channel.send(embeds=embed, components=components)
-
                 cache[war_id] = {
                     "data": war,
-                    "message_id": msg.id
+                    "messages": {channel_id: msg.id},
                 }
-
-                print(f"🆕 New {war_type.upper()} war {war_id}")
+                print(f"🆕 New {war_type.upper()} war {war_id} in channel {channel_id}")
                 continue
 
-            # 🔁 UPDATED WAR → edit message
             old_data = cache[war_id]["data"]
             if war != old_data:
                 try:
-                    msg = await channel.fetch_message(cache[war_id]["message_id"])
-                    embed = self.format_war(war)
-                    components = self.build_war_buttons(war["war_id"])
-                    msg = await channel.send(embeds=embed, components=components)
+                    message_id = cache[war_id]["messages"].get(channel_id)
+                    if message_id:
+                        msg = await channel.fetch_message(message_id)
+                        embed = build_war_embed(war)
+                        components = build_war_buttons(war)
+                        await msg.edit(embeds=embed, components=components)
+                    else:
+                        msg = await channel.send(
+                            embeds=build_war_embed(war),
+                            components=build_war_buttons(war),
+                        )
+                        cache[war_id]["messages"][channel_id] = msg.id
 
                     cache[war_id]["data"] = war
-                    print(f"🔁 Updated {war_type.upper()} war {war_id}")
-                except Exception as e:
-                    print(f"❌ Failed to edit war {war_id}: {e}")
+                    print(f"🔁 Updated {war_type.upper()} war {war_id} in channel {channel_id}")
+                except Exception as exc:
+                    print(f"❌ Failed to edit war {war_id}: {exc}")
 
-        # ---------------------------
-        # DELETED wars → delete message
-        # ---------------------------
-        if self.ready and latest_by_id:
+        if self.ready:
             for war_id in list(cache.keys()):
                 if war_id not in latest_by_id:
-                    try:
-                        msg = await channel.fetch_message(cache[war_id]["message_id"])
-                        await msg.delete()
-                        print(f"❌ Deleted {war_type.upper()} war {war_id}")
-                    except Exception:
-                        pass
+                    message_id = cache[war_id]["messages"].get(channel_id)
+                    if message_id:
+                        try:
+                            msg = await channel.fetch_message(message_id)
+                            await msg.delete()
+                            print(f"❌ Deleted {war_type.upper()} war {war_id} from channel {channel_id}")
+                        except Exception:
+                            pass
+                    cache[war_id]["messages"].pop(channel_id, None)
+                    if not cache[war_id]["messages"]:
+                        del cache[war_id]
 
-                    del cache[war_id]
 
-
-# ---------------------------
-# Extension Loader
-# ---------------------------
 def setup(bot: Client):
     PostWarBillboard(bot)
