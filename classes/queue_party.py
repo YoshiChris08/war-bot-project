@@ -14,7 +14,7 @@ MODE_CASUAL = "casual"
 
 
 class QueueParty:
-    """SendouQ-style party formed in a team server before a hub billboard post."""
+    """Party formed in a team server before a hub billboard post."""
 
     def __init__(
         self,
