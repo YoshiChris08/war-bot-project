@@ -1,1 +1,19 @@
-[]
+[
+  {
+    "war_id": "992c1a6a-86ef-4ac8-aa2f-51329619b2b9",
+    "war_type": "RT",
+    "team_name": "war matchmaking project",
+    "gathered": false,
+    "search_in_advance": false,
+    "start_time": "ASAP",
+    "last_updated": "2025-12-07T17:39:39.098689",
+    "ally_count": 0,
+    "lineup": [
+      {
+        "player": "callum",
+        "role": "Runner",
+        "ally": false
+      }
+    ]
+  }
+]

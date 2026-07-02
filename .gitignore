@@ -209,8 +209,5 @@ __marimo__/
 
 .env.local
 sa-key.json
-
-# Have files in initial commit, but to be empty in future commits
-billboard-data/*
-temp/billboard-data/
-temp/lineups/
+temp/billboard-data
+temp/lineups
