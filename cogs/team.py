@@ -12,6 +12,7 @@ from classes.team import Team
 from utils.config import SCOPES
 from utils.embeds import build_setup_embed
 from utils.guild_config import get_guild_config
+from utils.interactions_helpers import has_guild_admin
 from utils.team_store import get_team_by_guild, upsert_team
 
 
@@ -65,8 +66,7 @@ class TeamRegister(Extension):
             await ctx.send(embeds=embed, ephemeral=True)
             return
 
-        member = ctx.author
-        if not member.guild_permissions.administrator:
+        if not has_guild_admin(ctx):
             await ctx.send("You need **Administrator** to register a team.", ephemeral=True)
             return
 

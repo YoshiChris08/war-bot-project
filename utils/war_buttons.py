@@ -43,12 +43,6 @@ def build_war_buttons(war: Dict[str, Any]) -> Optional[List[ActionRow]]:
                     custom_id=f"war_join_ally:{war_id}",
                     disabled=join_disabled,
                 ),
-                Button(
-                    style=ButtonStyle.SUCCESS,
-                    label="Ready for Opponents",
-                    custom_id=f"war_seek_opponents:{war_id}",
-                    disabled=not can_seek_opponents(lineup),
-                ),
             )
         )
     else:
@@ -56,8 +50,8 @@ def build_war_buttons(war: Dict[str, Any]) -> Optional[List[ActionRow]]:
             ActionRow(
                 Button(
                     style=ButtonStyle.SUCCESS,
-                    label="Accept War",
-                    custom_id=f"war_accept:{war_id}",
+                    label="Request Match",
+                    custom_id=f"war_request:{war_id}",
                     disabled=not can_seek_opponents(lineup),
                 ),
                 Button(

@@ -5,11 +5,13 @@ import interactions
 from interactions import ComponentContext, Extension, component_callback
 
 from classes.player import Player
-from utils.embeds import build_queue_party_embed
-from utils.queue_buttons import build_queue_party_buttons
-from utils.queue_service import post_party_to_billboard
-from utils.queue_store import delete_party, get_party, upsert_party
-from utils.roster import is_roster_full
+from utils.billboard_refresh import refresh_war_billboard_posts
+from utils.match_posting import sync_billboard_post_from_party
+from utils.match_service import board_for_party
+from utils.queue_lobby import refresh_queue_lobby_message
+from utils.queue_service import cancel_party, post_party_to_billboard
+from utils.queue_store import get_party, upsert_party
+from utils.roster import PARTY_PREPARING, is_roster_full, team_queue_lobby_active
 
 
 def _player_in_lineup(lineup: list, discord_id: int) -> bool:
@@ -21,19 +23,7 @@ class QueueInteractions(Extension):
         self.bot = bot
 
     async def _refresh_lobby(self, party: dict) -> None:
-        channel_id = party.get("lobby_channel_id")
-        message_id = party.get("lobby_message_id")
-        if not channel_id or not message_id:
-            return
-        try:
-            channel = await self.bot.fetch_channel(channel_id)
-            message = await channel.fetch_message(message_id)
-            await message.edit(
-                embeds=build_queue_party_embed(party),
-                components=build_queue_party_buttons(party),
-            )
-        except Exception as exc:
-            print(f"❌ Failed to refresh lobby embed: {exc}")
+        await refresh_queue_lobby_message(self.bot, party)
 
     @component_callback(re.compile(r"^queue_join_(runner|bagger):(.+)$"))
     async def queue_join(self, ctx: ComponentContext):
@@ -42,7 +32,7 @@ class QueueInteractions(Extension):
         party_id = match.group(2)
 
         party = get_party(party_id)
-        if not party or party.get("status") != "preparing":
+        if not party or not team_queue_lobby_active(party):
             await ctx.send("This queue lobby is no longer open.", ephemeral=True)
             return
 
@@ -72,6 +62,12 @@ class QueueInteractions(Extension):
         )
         party["lineup"] = lineup
         upsert_party(party)
+        if party.get("status") != PARTY_PREPARING:
+            synced = sync_billboard_post_from_party(party)
+            if synced:
+                board, war = synced
+                upsert_party(party)
+                await refresh_war_billboard_posts(self.bot, board, war)
         await self._refresh_lobby(party)
         await ctx.send(f"You joined the queue as **{role_name}**.", ephemeral=True)
 
@@ -79,7 +75,7 @@ class QueueInteractions(Extension):
     async def queue_leave(self, ctx: ComponentContext):
         party_id = ctx.custom_id.split(":", 1)[1]
         party = get_party(party_id)
-        if not party or party.get("status") != "preparing":
+        if not party or not team_queue_lobby_active(party):
             await ctx.send("This queue lobby is no longer open.", ephemeral=True)
             return
 
@@ -94,6 +90,12 @@ class QueueInteractions(Extension):
 
         party["lineup"] = lineup
         upsert_party(party)
+        if party.get("status") != PARTY_PREPARING:
+            synced = sync_billboard_post_from_party(party)
+            if synced:
+                board, war = synced
+                upsert_party(party)
+                await refresh_war_billboard_posts(self.bot, board, war)
         await self._refresh_lobby(party)
         await ctx.send("You left the queue.", ephemeral=True)
 
@@ -101,7 +103,7 @@ class QueueInteractions(Extension):
     async def queue_post(self, ctx: ComponentContext):
         party_id = ctx.custom_id.split(":", 1)[1]
         party = get_party(party_id)
-        if not party or party.get("status") != "preparing":
+        if not party or party.get("status") != PARTY_PREPARING:
             await ctx.send("This queue is not ready to post.", ephemeral=True)
             return
 
@@ -115,6 +117,7 @@ class QueueInteractions(Extension):
             return
 
         party = get_party(party_id)
+        await refresh_war_billboard_posts(self.bot, board_for_party(party), post)
         await self._refresh_lobby(party)
         await ctx.send(f"{message}\n**Post ID:** `{post['war_id']}`", ephemeral=True)
 
@@ -130,7 +133,7 @@ class QueueInteractions(Extension):
             await ctx.send("Only the captain can cancel the queue.", ephemeral=True)
             return
 
-        delete_party(party_id)
+        cancel_party(party_id)
         try:
             await ctx.message.delete()
         except Exception:

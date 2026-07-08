@@ -13,17 +13,22 @@ from interactions import (
 )
 
 from classes.player import Player
-from utils.billboard_store import delete_war, find_war_across_boards, upsert_war
+from utils.billboard_store import delete_war, find_war_across_boards, find_war_by_author, upsert_war
+from utils.billboard_refresh import refresh_war_billboard_posts
+from utils.embeds import build_match_request_embed, build_war_embed
+from utils.guild_config import get_queue_channel_id
 from utils.match_posting import sync_party_lineup_from_post
+from utils.match_request_store import upsert_request
+from utils.match_service import start_match_request
+from utils.queue_lobby import refresh_queue_lobby_message
 from utils.queue_store import get_party, upsert_party
-from utils.config import track_to_type
-from utils.embeds import build_war_embed
 from utils.roster import (
     SEARCH_ALLIES,
     SEARCH_OPPONENTS,
     ally_slots_remaining,
     can_seek_opponents,
     is_roster_full,
+    reconcile_search_mode,
 )
 from utils.war_buttons import build_war_buttons
 
@@ -38,15 +43,23 @@ def _touch_war(war: Dict[str, Any]) -> Dict[str, Any]:
     return war
 
 
-def _save_and_refresh(war_type: str, war: Dict[str, Any]) -> Dict[str, Any]:
+def _save_and_refresh(board: str, war: Dict[str, Any]) -> Dict[str, Any]:
     war = _touch_war(war)
-    upsert_war(war_type, war)
-    party_id = war.get("party_id")
-    if party_id:
-        party = get_party(party_id)
-        if party:
-            upsert_party(sync_party_lineup_from_post(party, war))
+    upsert_war(board, war)
+    _sync_party_from_war(war)
     return war
+
+
+def _sync_party_from_war(war: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    party_id = war.get("party_id")
+    if not party_id:
+        return None
+    party = get_party(party_id)
+    if not party:
+        return None
+    party = sync_party_lineup_from_post(party, war)
+    upsert_party(party)
+    return party
 
 
 class WarInteractions(Extension):
@@ -59,21 +72,30 @@ class WarInteractions(Extension):
     def _is_author(self, war: Dict[str, Any], user_id: int) -> bool:
         return war.get("author_discord_id") == user_id
 
-    async def _edit_billboard_message(self, war_type: str, war: Dict[str, Any], message_id: int) -> None:
-        from utils.guild_config import get_billboard_channel_id
-
-        channel_id = get_billboard_channel_id(war.get("origin_guild_id"), war_type)
-        if not channel_id:
+    async def _refresh_team_lobby_for_war(self, war: Dict[str, Any]) -> None:
+        party_id = war.get("party_id")
+        if not party_id:
             return
+        party = get_party(party_id)
+        if party:
+            await refresh_queue_lobby_message(self.bot, party)
 
-        try:
-            channel = await self.bot.fetch_channel(channel_id)
-            message = await channel.fetch_message(message_id)
-            embed = build_war_embed(war)
-            components = build_war_buttons(war)
-            await message.edit(embeds=embed, components=components)
-        except Exception as exc:
-            print(f"❌ Failed to refresh billboard message for {war.get('war_id')}: {exc}")
+    async def _refresh_war_on_billboards(
+        self,
+        board: str,
+        war: Dict[str, Any],
+        clicked_message=None,
+    ) -> None:
+        embed = build_war_embed(war)
+        components = build_war_buttons(war)
+
+        if clicked_message is not None:
+            try:
+                await clicked_message.edit(embeds=embed, components=components)
+            except Exception as exc:
+                print(f"❌ Failed to edit clicked billboard for {war.get('war_id')}: {exc}")
+
+        await refresh_war_billboard_posts(self.bot, board, war)
 
     @component_callback(re.compile(r"^war_join_ally:(.+)$"))
     async def join_ally_prompt(self, ctx: ComponentContext):
@@ -83,7 +105,7 @@ class WarInteractions(Extension):
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        war_type, war = found
+        board, war = found
         if war.get("status") != "open" or war.get("search_mode") != SEARCH_ALLIES:
             await ctx.send("This war is not accepting allies right now.", ephemeral=True)
             return
@@ -131,7 +153,7 @@ class WarInteractions(Extension):
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        war_type, war = found
+        board, war = found
         lineup = war.get("lineup", [])
 
         if war.get("status") != "open" or war.get("search_mode") != SEARCH_ALLIES:
@@ -158,16 +180,15 @@ class WarInteractions(Extension):
             ).to_dict()
         )
         war["lineup"] = lineup
+        war["search_mode"] = reconcile_search_mode(war.get("search_mode", SEARCH_ALLIES), lineup)
 
-        if war.get("search_mode") == SEARCH_OPPONENTS and not can_seek_opponents(lineup):
-            war["search_mode"] = SEARCH_ALLIES
-
-        war = _save_and_refresh(war_type, war)
+        war = _save_and_refresh(board, war)
         await ctx.send(
             f"You joined **{war.get('team_name')}** as **{role_name}**.",
             ephemeral=True,
         )
-        await self._edit_billboard_message(war_type, war, ctx.message.id)
+        await self._refresh_war_on_billboards(board, war, ctx.message)
+        await self._refresh_team_lobby_for_war(war)
 
     @component_callback(re.compile(r"^war_seek_opponents:(.+)$"))
     async def seek_opponents(self, ctx: ComponentContext):
@@ -177,7 +198,7 @@ class WarInteractions(Extension):
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        war_type, war = found
+        board, war = found
         if not self._is_author(war, ctx.author.id):
             await ctx.send("Only the war author can switch to opponent search.", ephemeral=True)
             return
@@ -190,9 +211,9 @@ class WarInteractions(Extension):
             return
 
         war["search_mode"] = SEARCH_OPPONENTS
-        war = _save_and_refresh(war_type, war)
+        war = _save_and_refresh(board, war)
         await ctx.send("Your post is now **Looking For Opponents**.", ephemeral=True)
-        await self._edit_billboard_message(war_type, war, ctx.message.id)
+        await self._refresh_war_on_billboards(board, war, ctx.message)
 
     @component_callback(re.compile(r"^war_seek_allies:(.+)$"))
     async def seek_allies(self, ctx: ComponentContext):
@@ -202,25 +223,25 @@ class WarInteractions(Extension):
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        war_type, war = found
+        board, war = found
         if not self._is_author(war, ctx.author.id):
             await ctx.send("Only the war author can switch back to ally search.", ephemeral=True)
             return
 
         war["search_mode"] = SEARCH_ALLIES
-        war = _save_and_refresh(war_type, war)
+        war = _save_and_refresh(board, war)
         await ctx.send("Your post is now **Looking For Allies**.", ephemeral=True)
-        await self._edit_billboard_message(war_type, war, ctx.message.id)
+        await self._refresh_war_on_billboards(board, war, ctx.message)
 
-    @component_callback(re.compile(r"^war_accept:(.+)$"))
-    async def accept_war(self, ctx: ComponentContext):
+    @component_callback(re.compile(r"^war_request:(.+)$"))
+    async def request_match(self, ctx: ComponentContext):
         war_id = ctx.custom_id.split(":", 1)[1]
         found = self._get_war(war_id)
         if not found:
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        target_type, target_war = found
+        board, target_war = found
 
         if target_war.get("status") != "open":
             await ctx.send("This war is no longer available.", ephemeral=True)
@@ -235,49 +256,63 @@ class WarInteractions(Extension):
             return
 
         if self._is_author(target_war, ctx.author.id):
-            await ctx.send("You cannot accept your own war.", ephemeral=True)
+            await ctx.send("You cannot request your own war.", ephemeral=True)
             return
 
-        from utils.billboard_store import find_war_by_author
-
-        accepter_war = find_war_by_author(target_type, ctx.author.id)
-        if not accepter_war:
+        requester_war = find_war_by_author(board, ctx.author.id)
+        if not requester_war:
             await ctx.send(
-                "You need your own open war post in **Looking For Opponents** mode before accepting.",
+                "You need your own open war post in **Looking For Opponents** mode before requesting.",
                 ephemeral=True,
             )
             return
 
-        if accepter_war.get("search_mode") != SEARCH_OPPONENTS:
-            await ctx.send("Switch your war to **Looking For Opponents** first (`Ready for Opponents` button).", ephemeral=True)
+        if requester_war.get("search_mode") != SEARCH_OPPONENTS:
+            await ctx.send("Switch your war to **Looking For Opponents** first.", ephemeral=True)
             return
 
-        if not can_seek_opponents(accepter_war.get("lineup", [])):
-            await ctx.send("Your roster must be **5/5** with at least **1 bagger** to accept.", ephemeral=True)
+        if not can_seek_opponents(requester_war.get("lineup", [])):
+            await ctx.send("Your roster must be **5/5** with at least **1 bagger** to request.", ephemeral=True)
             return
 
-        target_war["status"] = "matched"
-        target_war["matched_opponent"] = {
-            "war_id": accepter_war.get("war_id"),
-            "team_name": accepter_war.get("team_name"),
-            "author_discord_id": ctx.author.id,
-        }
+        request, error = start_match_request(board, target_war["war_id"], requester_war["war_id"])
+        if error:
+            await ctx.send(error, ephemeral=True)
+            return
 
-        accepter_war["status"] = "matched"
-        accepter_war["matched_opponent"] = {
-            "war_id": target_war.get("war_id"),
-            "team_name": target_war.get("team_name"),
-            "author_discord_id": target_war.get("author_discord_id"),
-        }
+        queue_channel_id = get_queue_channel_id(target_war["origin_guild_id"])
+        if not queue_channel_id:
+            await ctx.send("Could not notify the other team — they have no queue channel configured.", ephemeral=True)
+            return
 
-        target_war = _save_and_refresh(target_type, target_war)
-        accepter_war = _save_and_refresh(target_type, accepter_war)
+        channel = await self.bot.fetch_channel(queue_channel_id)
+        components = [
+            ActionRow(
+                Button(
+                    style=ButtonStyle.SUCCESS,
+                    label="Accept Match",
+                    custom_id=f"match_accept:{request['request_id']}",
+                ),
+                Button(
+                    style=ButtonStyle.DANGER,
+                    label="Decline",
+                    custom_id=f"match_deny:{request['request_id']}",
+                ),
+            )
+        ]
+        msg = await channel.send(
+            content=f"<@{target_war['author_discord_id']}> — **{requester_war.get('team_name')}** requested a match!",
+            embeds=build_match_request_embed(requester_war),
+            components=components,
+        )
+        request["notification_channel_id"] = channel.id
+        request["notification_message_id"] = msg.id
+        upsert_request(request)
 
         await ctx.send(
-            f"You accepted **{target_war.get('team_name')}**'s war. Both posts are now matched.",
+            f"Match request sent to **{target_war.get('team_name')}**. Waiting for their captain to accept.",
             ephemeral=True,
         )
-        await self._edit_billboard_message(target_type, target_war, ctx.message.id)
 
     @component_callback(re.compile(r"^war_cancel:(.+)$"))
     async def cancel_war(self, ctx: ComponentContext):
@@ -287,7 +322,7 @@ class WarInteractions(Extension):
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        war_type, war = found
+        board, war = found
         if not self._is_author(war, ctx.author.id):
             await ctx.send("Only the war author can cancel this post.", ephemeral=True)
             return
@@ -298,15 +333,15 @@ class WarInteractions(Extension):
             if opponent_id:
                 opponent_found = self._get_war(opponent_id)
                 if opponent_found:
-                    opp_type, opp_war = opponent_found
+                    opp_board, opp_war = opponent_found
                     opp_war["status"] = "open"
                     opp_war["matched_opponent"] = None
-                    _save_and_refresh(opp_type, opp_war)
+                    _save_and_refresh(opp_board, opp_war)
 
         war["status"] = "cancelled"
         war["matched_opponent"] = None
-        _save_and_refresh(war_type, war)
-        delete_war(war_type, war_id)
+        _save_and_refresh(board, war)
+        delete_war(board, war_id)
         party_id = war.get("party_id")
         if party_id:
             from utils.queue_store import delete_party
@@ -327,7 +362,7 @@ class WarInteractions(Extension):
             await ctx.send("This war post no longer exists.", ephemeral=True)
             return
 
-        war_type, war = found
+        board, war = found
         if not self._is_author(war, ctx.author.id):
             await ctx.send("Only the war author can delete this post.", ephemeral=True)
             return
@@ -338,12 +373,12 @@ class WarInteractions(Extension):
             if opponent_id:
                 opponent_found = self._get_war(opponent_id)
                 if opponent_found:
-                    opp_type, opp_war = opponent_found
+                    opp_board, opp_war = opponent_found
                     opp_war["status"] = "open"
                     opp_war["matched_opponent"] = None
-                    _save_and_refresh(opp_type, opp_war)
+                    _save_and_refresh(opp_board, opp_war)
 
-        delete_war(war_type, war_id)
+        delete_war(board, war_id)
         party_id = war.get("party_id")
         if party_id:
             from utils.queue_store import delete_party

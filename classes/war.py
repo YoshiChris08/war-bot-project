@@ -25,6 +25,7 @@ class War:
         origin_guild_id: int = None,
         matched_opponent: Optional[Dict[str, Any]] = None,
         party_id: str = None,
+        mode: str = "ranked",
     ):
         self.war_id = war_id or str(uuid.uuid4())
         self.war_type = war_type.upper()
@@ -41,6 +42,7 @@ class War:
         self.origin_guild_id = origin_guild_id
         self.matched_opponent = matched_opponent
         self.party_id = party_id
+        self.mode = mode
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -59,6 +61,7 @@ class War:
             "origin_guild_id": self.origin_guild_id,
             "matched_opponent": self.matched_opponent,
             "party_id": self.party_id,
+            "mode": self.mode,
         }
 
     @classmethod
@@ -80,4 +83,5 @@ class War:
             origin_guild_id=data.get("origin_guild_id"),
             matched_opponent=data.get("matched_opponent"),
             party_id=data.get("party_id"),
+            mode=data.get("mode", "ranked"),
         )

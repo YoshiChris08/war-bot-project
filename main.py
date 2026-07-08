@@ -5,20 +5,15 @@ from google.api_core.exceptions import NotFound, PermissionDenied
 
 import interactions  # interactions.py
 
-# ---------------------------
-# Env & Google Secret Manager
-# ---------------------------
+from utils.config import DEV, GUILD_IDS, PROJECT_ENV, SCOPES
+
 load_dotenv(".env.local")
 
 PROJECT_SECRET_ID = os.getenv("GOOGLE_CLOUD_PROJECT_SECRET_ID", "war-bot")
 
-# ---------------------------
-# Environment Mode (DEV / PROD)
-# ---------------------------
-PROJECT_ENV = os.getenv("PROJECT_ENVIRONMENT", "local").lower()
-DEV = PROJECT_ENV == "local"
 print("Environment:", PROJECT_ENV)
 print("DEV MODE:", DEV)
+
 
 # ---------------------------
 # Secrets Helpers
@@ -73,18 +68,9 @@ token = get_secret("discord_key_local" if DEV else "discord_key_prod")
 # ---------------------------
 bot = interactions.Client(
     token=token,
-    intents=interactions.Intents.DEFAULT,
+    intents=interactions.Intents.DEFAULT | interactions.Intents.MESSAGE_CONTENT,
     send_command_tracebacks=False,
 )
-
-
-# ---------------------------
-# Guild / Scopes (DEV = instant, PROD = global)
-# ---------------------------
-GUILD_ID_ENV = os.getenv("GUILD_ID")
-GUILD_ID = int(GUILD_ID_ENV) if GUILD_ID_ENV else 1436538029316636705
-
-SCOPES = [GUILD_ID] if DEV else None
 
 
 # ---------------------------
@@ -105,10 +91,10 @@ async def hello(ctx: interactions.SlashContext):
 @interactions.listen()
 async def on_startup():
     user = bot.user
-    print(f"Logged in as {user.username}#{user.discriminator} ({user.id})")
+    print(f"Logged in as {user.tag} ({user.id})")
 
     if DEV:
-        print(f"⚡ DEV MODE: Slash commands registered instantly to guild {GUILD_ID}")
+        print(f"⚡ DEV MODE: Slash commands registered instantly to guild(s) {GUILD_IDS}")
     else:
         print("🌍 PROD MODE: Slash commands registered globally (may take up to 1 hour)")
 
@@ -136,7 +122,7 @@ async def on_startup():
                 try:
                     await msg.delete()
                     cleared += 1
-                except interactions.LibraryException:
+                except interactions.errors.LibraryException:
                     pass
             print(f"Cleared {cleared} messages in #{channel.name}")
         except Exception as e:
@@ -169,6 +155,8 @@ if __name__ == "__main__":
     bot.load_extension("cogs.queue_interactions")
     bot.load_extension("cogs.war_view")
     bot.load_extension("cogs.war_interactions")
+    bot.load_extension("cogs.match_interactions")
+    bot.load_extension("cogs.match_relay")
     bot.load_extension("cogs.submit_pen")
     bot.load_extension("cogs.post_war_billboard")
     bot.start()

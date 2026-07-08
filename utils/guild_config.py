@@ -2,7 +2,8 @@ import json
 import os
 from typing import Any, Dict, Optional
 
-from utils.config import CT_CHANNEL_ID, DATA_DIR, RT_CHANNEL_ID
+from utils.boards import ALL_BOARD_KEYS, parse_board_key
+from utils.config import DATA_DIR
 
 GUILD_CONFIG_PATH = os.path.join(DATA_DIR, "guild-config.json")
 
@@ -52,28 +53,70 @@ def delete_guild_config(guild_id: int) -> bool:
     return True
 
 
-def list_configured_billboard_channels(war_type: str) -> list[int]:
-    """Return unique billboard channel IDs from guild configs."""
-    channel_ids = []
+def _board_channel_field(board: str) -> str:
+    war_type, mode = parse_board_key(board)
+    prefix = "ct" if war_type == "CT" else "rt"
+    return f"{prefix}_{mode}_channel_id"
+
+
+def list_billboard_channel_targets(board: str) -> list[Dict[str, Any]]:
+    """Return guild + channel pairs for a board (one entry per unique channel)."""
+    targets: list[Dict[str, Any]] = []
+    seen_channels: set[int] = set()
+    field = _board_channel_field(board)
+    war_type, mode = parse_board_key(board)
+    legacy_field = "ct_channel_id" if war_type == "CT" else "rt_channel_id"
+
     data = _load_all()
-    field = "ct_channel_id" if war_type == "ct" else "rt_channel_id"
     for config in data.get("guilds", {}).values():
+        guild_id = config.get("guild_id")
         channel_id = config.get(field)
-        if channel_id and int(channel_id) not in channel_ids:
-            channel_ids.append(int(channel_id))
-    return channel_ids
+        if not channel_id and mode == "ranked":
+            channel_id = config.get(legacy_field)
+        if not guild_id or not channel_id:
+            continue
+
+        channel_id = int(channel_id)
+        if channel_id in seen_channels:
+            continue
+        seen_channels.add(channel_id)
+        targets.append(
+            {
+                "guild_id": int(guild_id),
+                "channel_id": channel_id,
+                "guild_name": config.get("name", str(guild_id)),
+            }
+        )
+    return targets
 
 
-def get_billboard_channel_id(guild_id: Optional[int], war_type: str) -> Optional[int]:
+def list_configured_billboard_channels(board: str) -> list[int]:
+    return [target["channel_id"] for target in list_billboard_channel_targets(board)]
+
+
+def get_billboard_channel_id(guild_id: Optional[int], board: str) -> Optional[int]:
     if guild_id:
         config = get_guild_config(guild_id)
         if config:
-            field = "ct_channel_id" if war_type.lower() == "ct" else "rt_channel_id"
+            field = _board_channel_field(board)
             channel_id = config.get(field)
+            if not channel_id:
+                war_type, mode = parse_board_key(board)
+                if mode == "ranked":
+                    legacy = "ct_channel_id" if war_type == "CT" else "rt_channel_id"
+                    channel_id = config.get(legacy)
             if channel_id:
                 return int(channel_id)
+    return None
 
-    return CT_CHANNEL_ID if war_type.lower() == "ct" else RT_CHANNEL_ID
+
+def list_all_billboard_channel_ids() -> list[int]:
+    ids = []
+    for board in ALL_BOARD_KEYS:
+        for channel_id in list_configured_billboard_channels(board):
+            if channel_id not in ids:
+                ids.append(channel_id)
+    return ids
 
 
 def get_queue_channel_id(guild_id: int) -> Optional[int]:

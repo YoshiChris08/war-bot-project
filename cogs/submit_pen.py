@@ -1,8 +1,8 @@
 import os
 import re
 import interactions
-from dotenv import load_dotenv
 from interactions import (
+    ActionRow,
     Extension,
     SlashContext,
     slash_command,
@@ -16,7 +16,7 @@ from interactions import (
     Embed,
 )
 
-load_dotenv(".env.local")
+from utils.config import SCOPES
 
 
 def parse_int_env(env_name):
@@ -127,6 +127,7 @@ class PenSubmit(Extension):
     @slash_command(
         name="submit_pen",
         description="Pings GSC Referees with a provided possible Penalty",
+        scopes=SCOPES,
     )
     @slash_option(
         name="type",
@@ -176,12 +177,18 @@ class PenSubmit(Extension):
 
         channel = await self.bot.fetch_channel(spec_channel_id)
 
-        buttons = [
+        vote_buttons = [
             Button(style=ButtonStyle.PRIMARY, label=opt, custom_id=f"vote_button_{opt}")
             for opt in PenaltyVote.OPTIONS
-        ] + [Button(style=ButtonStyle.RED, label="Remove Vote", custom_id="remove_button")]
+        ]
+        components = [
+            ActionRow(*vote_buttons),
+            ActionRow(
+                Button(style=ButtonStyle.DANGER, label="Remove Vote", custom_id="remove_button"),
+            ),
+        ]
 
-        message = await channel.send(content=f"<@&{ref_role_id}>", components=buttons)
+        message = await channel.send(content=f"<@&{ref_role_id}>", components=components)
 
         vote_manager.create(message.id, title, f"Download: {attachment}", ctx.author.mention)
         await message.edit(embeds=[vote_manager.get(message.id).build_embed()])
@@ -195,7 +202,8 @@ class PenSubmit(Extension):
     async def vote_handler(self, ctx: ComponentContext):
         vote = ctx.custom_id.split("_")[-1]
 
-        if not any(role.id in global_ping_role for role in ctx.author.roles):
+        roles = getattr(ctx.author, "roles", None) or []
+        if not any(role.id in global_ping_role for role in roles):
             await ctx.send("You do not have permission to vote.", ephemeral=True)
             return
 
@@ -233,9 +241,11 @@ class PenSubmit(Extension):
     @slash_command(
         name="pen_votes",
         description="Checks who voted on the most recent GSC penalty!",
+        scopes=SCOPES,
     )
     async def pen_votes(self, ctx: SlashContext):
-        if not any(role.id in global_ping_role for role in ctx.author.roles):
+        roles = getattr(ctx.author, "roles", None) or []
+        if not any(role.id in global_ping_role for role in roles):
             await ctx.send("You do not have permission to execute this!", ephemeral=True)
             return
 

@@ -10,6 +10,7 @@ PARTY_POSTED = "posted"
 PARTY_MATCHED = "matched"
 PARTY_CANCELLED = "cancelled"
 
+MODE_RANKED = "ranked"
 MODE_CASUAL = "casual"
 
 
@@ -24,7 +25,7 @@ class QueueParty:
         war_type: str,
         captain_discord_id: int,
         search_time: str = "ASAP",
-        mode: str = MODE_CASUAL,
+        mode: str = MODE_RANKED,
         status: str = PARTY_PREPARING,
         lineup: List[Player] = None,
         party_id: str = None,
@@ -83,7 +84,7 @@ class QueueParty:
             war_type=data.get("war_type", "RT"),
             captain_discord_id=data.get("captain_discord_id"),
             search_time=data.get("search_time", "ASAP"),
-            mode=data.get("mode", MODE_CASUAL),
+            mode=data.get("mode", MODE_RANKED),
             status=data.get("status", PARTY_PREPARING),
             lineup=lineup,
             invite_code=data.get("invite_code"),
