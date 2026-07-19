@@ -6,6 +6,8 @@ from interactions import ComponentContext, Extension, component_callback
 
 from classes.player import Player
 from utils.billboard_refresh import refresh_war_billboard_posts
+from utils.lineup_lock import find_blocking_lineup, lineup_lock_message
+from utils.player_links import require_linked_fc
 from utils.match_posting import sync_billboard_post_from_party
 from utils.match_service import board_for_party
 from utils.queue_lobby import refresh_queue_lobby_message
@@ -40,6 +42,9 @@ class QueueInteractions(Extension):
             await ctx.send("Only members of **this team's server** can join the queue lobby.", ephemeral=True)
             return
 
+        if not await require_linked_fc(ctx, party.get("guild_id")):
+            return
+
         lineup = party.get("lineup", [])
         if is_roster_full(lineup):
             await ctx.send("This queue is already full (5/5).", ephemeral=True)
@@ -47,6 +52,11 @@ class QueueInteractions(Extension):
 
         if _player_in_lineup(lineup, ctx.author.id):
             await ctx.send("You are already in this queue.", ephemeral=True)
+            return
+
+        block = find_blocking_lineup(ctx.author.id, exclude_party_id=party_id)
+        if block:
+            await ctx.send(lineup_lock_message(block), ephemeral=True)
             return
 
         is_bagger = role_key == "bagger"

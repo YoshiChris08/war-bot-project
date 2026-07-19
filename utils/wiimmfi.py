@@ -2,6 +2,22 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 DEFAULT_RUNNER_SLOTS = 4
+FC_DIGITS_PATTERN = re.compile(r"^\d{12}$")
+
+
+def normalize_friend_code(raw: str) -> Optional[str]:
+    digits = re.sub(r"\D", "", (raw or "").strip())
+    if not FC_DIGITS_PATTERN.match(digits):
+        return None
+    return f"{digits[0:4]}-{digits[4:8]}-{digits[8:12]}"
+
+
+def friend_code_key(raw: str) -> Optional[str]:
+    """Normalize FC to 12 digits for comparisons."""
+    fc = normalize_friend_code(raw)
+    if not fc:
+        return None
+    return re.sub(r"\D", "", fc)
 
 
 def normalize_rxx(raw: str) -> Optional[str]:
@@ -150,6 +166,31 @@ def build_table_reference_from_scores(
             "loser": loser_entry,
         },
     }
+
+
+def team_point_total(entry: Dict[str, Any]) -> int:
+    players = entry.get("players") or []
+    total = sum(int(player.get("score", 0)) for player in players)
+    return total + int(entry.get("penalties", 0))
+
+
+def score_implied_margin(winner_entry: Dict[str, Any], loser_entry: Dict[str, Any]) -> int:
+    return team_point_total(winner_entry) - team_point_total(loser_entry)
+
+
+def validate_reported_margin(
+    winner_entry: Dict[str, Any],
+    loser_entry: Dict[str, Any],
+    reported_margin: int,
+) -> tuple[bool, Optional[str]]:
+    implied = score_implied_margin(winner_entry, loser_entry)
+    if implied != reported_margin:
+        return False, (
+            f"Submitted scores imply a **{implied}**-point margin "
+            f"(winner `{team_point_total(winner_entry)}` vs loser `{team_point_total(loser_entry)}`), "
+            f"but **{reported_margin}** was reported."
+        )
+    return True, None
 
 
 def format_table_reference_summary(table_ref: Dict[str, Any]) -> str:

@@ -1,0 +1,24 @@
+{
+  "requests": {
+    "3c90b3f1-1257-46de-995b-5c4e4ac1c959": {
+      "request_id": "3c90b3f1-1257-46de-995b-5c4e4ac1c959",
+      "board": "rt-ranked",
+      "target_war_id": "c0d0c5f0-3464-4af4-b556-f35b7280fce9",
+      "requester_war_id": "02bb1d4a-6fce-4d3a-9759-4372539162a6",
+      "status": "accepted",
+      "notification_channel_id": 1524538319461945404,
+      "notification_message_id": 1524544639607111811,
+      "created_at": "2026-07-08T22:36:06.560835"
+    },
+    "24a9db59-0b74-4d41-bb7b-9c9cfaf8725e": {
+      "request_id": "24a9db59-0b74-4d41-bb7b-9c9cfaf8725e",
+      "board": "rt-ranked",
+      "target_war_id": "8e702b31-88f1-4c63-b72d-e7a55ecfc423",
+      "requester_war_id": "dd28299f-13c1-4ea0-bb25-dc1420d88fd5",
+      "status": "accepted",
+      "notification_channel_id": 1524538319461945404,
+      "notification_message_id": 1524557524890550469,
+      "created_at": "2026-07-08T23:27:18.924762"
+    }
+  }
+}

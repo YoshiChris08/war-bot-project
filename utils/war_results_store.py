@@ -38,3 +38,32 @@ def append_result(result: Dict[str, Any]) -> Dict[str, Any]:
 
 def list_results() -> List[Dict[str, Any]]:
     return _load_all()["results"]
+
+
+def list_results_for_player(discord_id: int, *, limit: int = 5) -> List[Dict[str, Any]]:
+    """Most recent completed wars involving this Discord user (newest first)."""
+    matches: List[Dict[str, Any]] = []
+    target = int(discord_id)
+    for result in reversed(list_results()):
+        found_side = None
+        found_player = None
+        for side, key in (("winner", "winner_lineup"), ("loser", "loser_lineup")):
+            for player in result.get(key) or []:
+                if player.get("discord_id") == target:
+                    found_side = side
+                    found_player = player
+                    break
+            if found_side:
+                break
+        if not found_side:
+            continue
+        matches.append(
+            {
+                **result,
+                "player_outcome": "W" if found_side == "winner" else "L",
+                "player_entry": found_player,
+            }
+        )
+        if len(matches) >= limit:
+            break
+    return matches

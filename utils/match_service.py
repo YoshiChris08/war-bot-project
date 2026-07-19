@@ -130,20 +130,22 @@ async def create_war_comm_channels(
     intro_a = (
         f"**Match confirmed** vs **{requester_war.get('team_name')}**.\n"
         "Chat here — messages relay to the other team's war channel.\n\n"
+        "**Before finishing:** everyone on the roster should `/profile link`.\n\n"
         "**Captain commands (this channel only):**\n"
-        "• `/queue complete` + `outcome:won` or `lost` — finish the match\n"
-        "• `/queue submit-scores` — submit your team's score line (if no RXX)\n"
-        "• `/queue confirm` / `/queue dispute` — both captains confirm the result\n"
-        "• `/queue cancel-match` — request to abort (other captain approves)"
+        "• `/war complete` — report won/lost + margin + **RXX** (scores auto-load from room)\n"
+        "• `/war scores` — manual fallback only if RXX lookup fails\n"
+        "• `/war confirm` / `/war dispute` — both captains confirm\n"
+        "• `/war cancel` — request abort (opponent `/war approve-cancel`)"
     )
     intro_b = (
         f"**Match confirmed** vs **{target_war.get('team_name')}**.\n"
         "Chat here — messages relay to the other team's war channel.\n\n"
+        "**Before finishing:** everyone on the roster should `/profile link`.\n\n"
         "**Captain commands (this channel only):**\n"
-        "• `/queue complete` + `outcome:won` or `lost` — finish the match\n"
-        "• `/queue submit-scores` — submit your team's score line (if no RXX)\n"
-        "• `/queue confirm` / `/queue dispute` — both captains confirm the result\n"
-        "• `/queue cancel-match` — request to abort (other captain approves)"
+        "• `/war complete` — report won/lost + margin + **RXX** (scores auto-load from room)\n"
+        "• `/war scores` — manual fallback only if RXX lookup fails\n"
+        "• `/war confirm` / `/war dispute` — both captains confirm\n"
+        "• `/war cancel` — request abort (opponent `/war approve-cancel`)"
     )
     await channel_a.send(intro_a)
     await channel_b.send(intro_b)

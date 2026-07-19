@@ -17,6 +17,8 @@ from utils.billboard_store import delete_war, find_war_across_boards, find_war_b
 from utils.billboard_refresh import refresh_war_billboard_posts
 from utils.embeds import build_match_request_embed, build_war_embed
 from utils.guild_config import get_queue_channel_id
+from utils.lineup_lock import find_blocking_lineup, lineup_lock_message
+from utils.player_links import require_linked_fc
 from utils.match_posting import sync_party_lineup_from_post
 from utils.match_request_store import upsert_request
 from utils.match_service import start_match_request
@@ -114,8 +116,16 @@ class WarInteractions(Extension):
             await ctx.send("This roster is already full (5/5).", ephemeral=True)
             return
 
+        if not await require_linked_fc(ctx):
+            return
+
         if _player_in_lineup(war.get("lineup", []), ctx.author.id):
             await ctx.send("You are already on this roster.", ephemeral=True)
+            return
+
+        block = find_blocking_lineup(ctx.author.id, exclude_war_id=war_id)
+        if block:
+            await ctx.send(lineup_lock_message(block), ephemeral=True)
             return
 
         if self._is_author(war, ctx.author.id):
@@ -160,12 +170,20 @@ class WarInteractions(Extension):
             await ctx.send("This war is not accepting allies right now.", ephemeral=True)
             return
 
+        if not await require_linked_fc(ctx):
+            return
+
         if is_roster_full(lineup):
             await ctx.send("This roster is already full (5/5).", ephemeral=True)
             return
 
         if _player_in_lineup(lineup, ctx.author.id):
             await ctx.send("You are already on this roster.", ephemeral=True)
+            return
+
+        block = find_blocking_lineup(ctx.author.id, exclude_war_id=war_id)
+        if block:
+            await ctx.send(lineup_lock_message(block), ephemeral=True)
             return
 
         is_bagger = role_key == "bagger"

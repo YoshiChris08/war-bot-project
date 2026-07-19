@@ -1,4 +1,4 @@
-"""Match completion/cancel logic for `/queue` in war comm channels only."""
+"""Match completion/cancel logic for `/war` in war comm channels."""
 
 from typing import Optional
 
@@ -19,10 +19,11 @@ from utils.war_completion import (
     notify_opponent_confirmation,
     notify_teams_for_score_collection,
 )
+from utils.rxx_scoring import build_scores_from_rxx, validate_rxx_margin
 from utils.war_completion_store import (
     both_captains_confirmed,
+    clear_team_scores,
     create_pending_collecting_scores,
-    create_pending_with_rxx,
     delete_pending,
     find_pending_for_war,
     get_pending,
@@ -32,11 +33,11 @@ from utils.war_completion_store import (
 )
 from utils.wiimmfi import (
     build_score_entry_instructions,
-    build_table_reference_from_rxx,
     build_table_reference_from_scores,
     build_team_score_entry,
     normalize_rxx,
     parse_score_line,
+    validate_reported_margin,
 )
 
 
@@ -118,10 +119,22 @@ async def maybe_finish_score_collection(bot, pending: dict, session: dict) -> bo
         return False
     _, loser_war = loser_found
 
-    table_ref = build_table_reference_from_scores(
-        scores[winner_war["war_id"]],
-        scores[loser_war["war_id"]],
+    winner_entry = scores[winner_war["war_id"]]
+    loser_entry = scores[loser_war["war_id"]]
+    ok, margin_error = validate_reported_margin(
+        winner_entry, loser_entry, int(pending["point_margin"])
     )
+    if not ok:
+        clear_team_scores(pending["completion_id"])
+        notice = (
+            f"⚠️ **Score margin mismatch** — {margin_error}\n"
+            "Both captains must `/war scores` again with corrected values."
+        )
+        for guild_id in (pending.get("reporter_guild_id"), pending.get("opponent_guild_id")):
+            await send_to_guild_war_channel(bot, session, guild_id, notice)
+        return False
+
+    table_ref = build_table_reference_from_scores(winner_entry, loser_entry)
     pending = mark_pending_confirmation(pending["completion_id"], table_ref)
     if not pending:
         return False
@@ -177,10 +190,10 @@ async def handle_complete(
             max_length=4,
         ),
         ShortText(
-            label="RXX room (optional)",
+            label="RXX room code",
             custom_id="rxx",
-            placeholder="r12345 — skips manual scores",
-            required=False,
+            placeholder="r12345",
+            required=True,
             max_length=8,
         ),
         title="Complete match",
@@ -196,30 +209,56 @@ async def handle_complete(
     winner_war = war if reporter_won else opp
     loser_war = opp if reporter_won else war
     rxx = normalize_rxx(m_ctx.kwargs.get("rxx", ""))
+    if not rxx:
+        await m_ctx.send("A valid **RXX** room code is required (e.g. `r12345`).", ephemeral=True)
+        return
 
-    if rxx:
-        pending = create_pending_with_rxx(
-            board, war, opp, winner_war["war_id"], margin, ctx.author.id, rxx, session.get("session_id")
+    table_ref, rxx_error = await build_scores_from_rxx(rxx, winner_war, loser_war, margin)
+    if table_ref:
+        pending = create_pending_collecting_scores(
+            board,
+            war,
+            opp,
+            winner_war["war_id"],
+            margin,
+            ctx.author.id,
+            session.get("session_id"),
+            rxx=rxx,
         )
+        pending = mark_pending_confirmation(pending["completion_id"], table_ref)
+        if not pending:
+            await m_ctx.send("Could not save completion.", ephemeral=True)
+            return
         await notify_opponent_confirmation(
             bot, pending, winner_war.get("team_name"), loser_war.get("team_name")
         )
         await m_ctx.send(
-            f"Result submitted — both captains must `/queue confirm` in their war channels.\n"
-            f"**Winner:** {winner_war.get('team_name')} · **Margin:** `{margin}` · **RXX:** `{rxx}`",
+            f"Scores loaded from **`{rxx}`** — both captains must `/war confirm`.\n"
+            f"**Winner:** {winner_war.get('team_name')} · **Margin:** `{margin}`",
             ephemeral=True,
         )
         return
 
     pending = create_pending_collecting_scores(
-        board, war, opp, winner_war["war_id"], margin, ctx.author.id, session.get("session_id")
+        board,
+        war,
+        opp,
+        winner_war["war_id"],
+        margin,
+        ctx.author.id,
+        session.get("session_id"),
+        rxx=rxx,
+        manual_fallback=True,
+        fallback_reason=rxx_error,
     )
-    await notify_teams_for_score_collection(
-        bot, pending, war, opp, winner_war.get("team_name"), session
+    fallback_note = (
+        f"⚠️ Could not load scores from **`{rxx}`** — {rxx_error}\n"
+        "**Manual fallback:** each captain must `/war scores` in their war channel."
     )
+    for guild_id in (pending.get("reporter_guild_id"), pending.get("opponent_guild_id")):
+        await send_to_guild_war_channel(bot, session, guild_id, fallback_note)
     await m_ctx.send(
-        f"Each captain must run `/queue submit-scores` in their war channel.\n\n"
-        f"{build_score_entry_instructions(war.get('lineup', []))}",
+        f"RXX lookup failed — manual score entry required.\n{fallback_note}",
         ephemeral=True,
     )
 
@@ -241,6 +280,14 @@ async def handle_submit_scores(bot, ctx) -> None:
     pending = find_pending_for_war(war["war_id"])
     if not pending or pending.get("status") != "collecting_scores":
         await ctx.send("This match is not waiting for score submissions.", ephemeral=True)
+        return
+
+    if not pending.get("manual_fallback"):
+        await ctx.send(
+            "Scores are loaded from the **RXX** room automatically. "
+            "`/war scores` is only available when RXX lookup failed.",
+            ephemeral=True,
+        )
         return
 
     if (pending.get("team_scores") or {}).get(war["war_id"]):
@@ -316,7 +363,7 @@ async def handle_confirm(bot, ctx) -> None:
             else pending["reporter_captain_id"]
         )
         await ctx.send(
-            "Your confirmation was recorded. Waiting for the other captain to `/queue confirm`.",
+            "Your confirmation was recorded. Waiting for the other captain to `/war confirm`.",
             ephemeral=True,
         )
         for guild_id in (pending.get("reporter_guild_id"), pending.get("opponent_guild_id")):
@@ -324,7 +371,7 @@ async def handle_confirm(bot, ctx) -> None:
                 bot,
                 session,
                 guild_id,
-                f"<@{other_id}> — Your opponent confirmed the result. Run `/queue confirm` to finalize.",
+                f"<@{other_id}> — Your opponent confirmed the result. Run `/war confirm` to finalize.",
             )
         return
 
@@ -353,6 +400,45 @@ async def handle_confirm(bot, ctx) -> None:
         "rxx": pending.get("rxx"),
         "team_scores": pending.get("team_scores"),
     }
+
+    if pending.get("sync_method") == "player_scores":
+        team_scores = pending.get("team_scores") or {}
+        winner_entry = team_scores.get("winner") or {}
+        loser_entry = team_scores.get("loser") or {}
+        ok, margin_error = validate_reported_margin(
+            winner_entry, loser_entry, int(pending["point_margin"])
+        )
+        if not ok:
+            delete_pending(pending["completion_id"])
+            await ctx.send(f"Cannot finalize: {margin_error}", ephemeral=True)
+            for guild_id in (pending.get("reporter_guild_id"), pending.get("opponent_guild_id")):
+                await send_to_guild_war_channel(
+                    bot,
+                    session,
+                    guild_id,
+                    f"⚠️ Result blocked — {margin_error} Use `/war complete` to resubmit.",
+                )
+            return
+
+    if pending.get("sync_method") == "rxx" and pending.get("rxx"):
+        ok, rxx_error = await validate_rxx_margin(
+            pending["rxx"],
+            int(pending["point_margin"]),
+            winner_war,
+            loser_war,
+        )
+        if not ok and rxx_error:
+            delete_pending(pending["completion_id"])
+            await ctx.send(f"Cannot finalize: {rxx_error}", ephemeral=True)
+            for guild_id in (pending.get("reporter_guild_id"), pending.get("opponent_guild_id")):
+                await send_to_guild_war_channel(
+                    bot,
+                    session,
+                    guild_id,
+                    f"⚠️ RXX margin mismatch — {rxx_error} Use `/war complete` to resubmit.",
+                )
+            return
+
     result = await finalize_war_completion(
         bot, board, winner_war, loser_war, int(pending["point_margin"]), table_ref
     )
@@ -399,7 +485,7 @@ async def handle_dispute(bot, ctx) -> None:
             session,
             guild_id,
             f"**{war.get('team_name')}** disputed the result. "
-            "Captain: `/queue complete` with `outcome` to resubmit.",
+            "Captain: `/war complete` to resubmit.",
         )
 
 
@@ -442,7 +528,7 @@ async def handle_match_cancel(bot, ctx) -> None:
         opp.get("origin_guild_id"),
         (
             f"<@{opp.get('author_discord_id')}> — **{war.get('team_name')}** wants to cancel this match.\n"
-            "Approve: `/queue approve-cancel` · Decline: `/queue decline-cancel`"
+            "Approve: `/war approve-cancel` · Decline: `/war decline-cancel`"
         ),
     )
     await ctx.send("Cancel request sent to the other team's war channel.", ephemeral=True)

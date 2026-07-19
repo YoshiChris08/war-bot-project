@@ -30,7 +30,7 @@ class WarView(Extension):
         party = get_active_party_for_user(ctx.author.id)
         if not party:
             await ctx.send(
-                "You are not in a queue. Use `/queue` → **Start queue** in your team server.",
+                "You are not in a queue. Use `/queue start` in your team server.",
                 ephemeral=True,
             )
             return

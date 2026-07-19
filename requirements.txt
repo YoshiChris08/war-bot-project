@@ -7,3 +7,4 @@ psycopg[binary]>=3.2
 PyMySQL>=1.1
 discord.py>=2.4
 discord-py-interactions>=5.15.0
+aiohttp>=3.9

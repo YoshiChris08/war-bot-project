@@ -60,7 +60,12 @@ async def finalize_war_completion(
     mmr_delta = 0
     per_player: Dict[str, int] = {}
     if mode == MODE_RANKED:
-        mmr_delta, per_player = apply_ranked_war_mmr(winner_lineup, loser_lineup, point_margin)
+        mmr_delta, per_player = apply_ranked_war_mmr(
+            winner_lineup,
+            loser_lineup,
+            point_margin,
+            war_type=winner_war.get("war_type", "RT"),
+        )
 
     table_reference = table_reference or {}
     result = append_result(
@@ -126,7 +131,7 @@ async def notify_teams_for_score_collection(
     header = (
         f"**{pending['reporter_team_name']}** started match completion "
         f"(winner: **{winner_name}**, margin: `{pending['point_margin']}`).\n"
-        "Each **captain** runs `/queue submit-scores` in this channel.\n\n"
+        "Each **captain** runs `/war scores` in this channel.\n\n"
     )
 
     for war in (reporter_war, opponent_war):
@@ -184,8 +189,8 @@ async def notify_teams_for_confirmation(
         f"**Margin:** `{pending['point_margin']}` points\n"
         f"{table_line}"
         f"{scores_block}\n\n"
-        "Both captains must run `/queue confirm` in their war channel.\n"
-        "Dispute: `/queue dispute`"
+        "Both captains must run `/war confirm` in their war channel.\n"
+        "Dispute: `/war dispute`"
     )
 
     for captain_id, guild_id in (

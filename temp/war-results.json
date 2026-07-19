@@ -1,0 +1,400 @@
+{
+  "results": [
+    {
+      "board": "rt-ranked",
+      "mode": "ranked",
+      "war_type": "RT",
+      "winner_war_id": "02bb1d4a-6fce-4d3a-9759-4372539162a6",
+      "loser_war_id": "c0d0c5f0-3464-4af4-b556-f35b7280fce9",
+      "winner_team_name": "wmp testers",
+      "loser_team_name": "wmp public beta",
+      "winner_guild_id": 1436538029316636705,
+      "loser_guild_id": 1524521842604380190,
+      "point_margin": 2,
+      "winner_lineup": [
+        {
+          "player": "Klyde",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 414031492147314688
+        },
+        {
+          "player": "kins",
+          "role": "Bagger",
+          "ally": false,
+          "bagger": true,
+          "discord_id": 284112499115294730
+        },
+        {
+          "player": "bran",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 698994127005810729
+        },
+        {
+          "player": "Gwynne",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 636300423447445514
+        },
+        {
+          "player": "YoshiChris08",
+          "role": "Runner",
+          "ally": true,
+          "bagger": false,
+          "discord_id": 535940512440385550
+        }
+      ],
+      "loser_lineup": [
+        {
+          "player": "EmilP",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 82862780591378432
+        },
+        {
+          "player": "Joyfulsinger",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 730849077826158732
+        },
+        {
+          "player": "YoshiChris08",
+          "role": "Bagger",
+          "ally": false,
+          "bagger": true,
+          "discord_id": 535940512440385550
+        },
+        {
+          "player": "Fatal",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 309334590693179394
+        },
+        {
+          "player": "Wrensicle♪",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 650548545723564073
+        }
+      ],
+      "team_mmr_delta": 16,
+      "player_mmr_deltas": {
+        "414031492147314688": 16,
+        "284112499115294730": 16,
+        "698994127005810729": 16,
+        "636300423447445514": 16,
+        "82862780591378432": -16,
+        "730849077826158732": -16,
+        "535940512440385550": -16,
+        "309334590693179394": -16,
+        "650548545723564073": -16
+      },
+      "sync_method": "player_scores",
+      "rxx": null,
+      "team_scores": {
+        "winner": {
+          "war_id": "02bb1d4a-6fce-4d3a-9759-4372539162a6",
+          "team_name": "wmp testers",
+          "players": [
+            {
+              "player": "Klyde",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 414031492147314688,
+              "ally": false,
+              "score": 100
+            },
+            {
+              "player": "bran",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 698994127005810729,
+              "ally": false,
+              "score": 90
+            },
+            {
+              "player": "Gwynne",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 636300423447445514,
+              "ally": false,
+              "score": 80
+            },
+            {
+              "player": "YoshiChris08",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 535940512440385550,
+              "ally": true,
+              "score": 70
+            },
+            {
+              "player": "kins",
+              "role": "Bagger",
+              "bagger": true,
+              "discord_id": 284112499115294730,
+              "ally": false,
+              "score": 1
+            }
+          ],
+          "penalties": 0
+        },
+        "loser": {
+          "war_id": "c0d0c5f0-3464-4af4-b556-f35b7280fce9",
+          "team_name": "wmp public beta",
+          "players": [
+            {
+              "player": "EmilP",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 82862780591378432,
+              "ally": false,
+              "score": 50
+            },
+            {
+              "player": "Joyfulsinger",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 730849077826158732,
+              "ally": false,
+              "score": 50
+            },
+            {
+              "player": "Fatal",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 309334590693179394,
+              "ally": false,
+              "score": 50
+            },
+            {
+              "player": "Wrensicle♪",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 650548545723564073,
+              "ally": false,
+              "score": 100
+            },
+            {
+              "player": "YoshiChris08",
+              "role": "Bagger",
+              "bagger": true,
+              "discord_id": 535940512440385550,
+              "ally": false,
+              "score": 2
+            }
+          ],
+          "penalties": -4
+        }
+      },
+      "result_id": "5b0b5883-1d29-4f93-935c-e4b700135007",
+      "completed_at": "2026-07-08T23:12:22.017508",
+      "table_bot_synced": false
+    },
+    {
+      "board": "rt-ranked",
+      "mode": "ranked",
+      "war_type": "RT",
+      "winner_war_id": "dd28299f-13c1-4ea0-bb25-dc1420d88fd5",
+      "loser_war_id": "8e702b31-88f1-4c63-b72d-e7a55ecfc423",
+      "winner_team_name": "wmp testers",
+      "loser_team_name": "wmp public beta",
+      "winner_guild_id": 1436538029316636705,
+      "loser_guild_id": 1524521842604380190,
+      "point_margin": 27,
+      "winner_lineup": [
+        {
+          "player": "YoshiChris08",
+          "role": "Bagger",
+          "ally": false,
+          "bagger": true,
+          "discord_id": 535940512440385550
+        },
+        {
+          "player": "Maya♪",
+          "role": "Runner",
+          "ally": true,
+          "bagger": false,
+          "discord_id": 1383235279506243625
+        },
+        {
+          "player": "Emerald Rain",
+          "role": "Runner",
+          "ally": true,
+          "bagger": false,
+          "discord_id": 1105487599310745660
+        },
+        {
+          "player": "Javz",
+          "role": "Runner",
+          "ally": true,
+          "bagger": false,
+          "discord_id": 874430206725746688
+        },
+        {
+          "player": "bran",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 698994127005810729
+        }
+      ],
+      "loser_lineup": [
+        {
+          "player": "Joyfulsinger",
+          "role": "Bagger",
+          "ally": false,
+          "bagger": true,
+          "discord_id": 730849077826158732
+        },
+        {
+          "player": "EmilP",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 82862780591378432
+        },
+        {
+          "player": "hoooooooofi",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 882746313907777616
+        },
+        {
+          "player": "played mkwii twice in my life",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 650548545723564073
+        },
+        {
+          "player": "Spade",
+          "role": "Runner",
+          "ally": false,
+          "bagger": false,
+          "discord_id": 159804107459133440
+        }
+      ],
+      "team_mmr_delta": 20,
+      "player_mmr_deltas": {
+        "535940512440385550": 20,
+        "698994127005810729": 20,
+        "730849077826158732": -20,
+        "82862780591378432": -20,
+        "882746313907777616": -20,
+        "650548545723564073": -20,
+        "159804107459133440": -20
+      },
+      "sync_method": "player_scores",
+      "rxx": null,
+      "team_scores": {
+        "winner": {
+          "war_id": "dd28299f-13c1-4ea0-bb25-dc1420d88fd5",
+          "team_name": "wmp testers",
+          "players": [
+            {
+              "player": "Maya♪",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 1383235279506243625,
+              "ally": true,
+              "score": 77
+            },
+            {
+              "player": "Emerald Rain",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 1105487599310745660,
+              "ally": true,
+              "score": 77
+            },
+            {
+              "player": "Javz",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 874430206725746688,
+              "ally": true,
+              "score": 122
+            },
+            {
+              "player": "bran",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 698994127005810729,
+              "ally": false,
+              "score": 92
+            },
+            {
+              "player": "YoshiChris08",
+              "role": "Bagger",
+              "bagger": true,
+              "discord_id": 535940512440385550,
+              "ally": false,
+              "score": 8
+            }
+          ],
+          "penalties": -20
+        },
+        "loser": {
+          "war_id": "8e702b31-88f1-4c63-b72d-e7a55ecfc423",
+          "team_name": "wmp public beta",
+          "players": [
+            {
+              "player": "EmilP",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 82862780591378432,
+              "ally": false,
+              "score": 98
+            },
+            {
+              "player": "hoooooooofi",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 882746313907777616,
+              "ally": false,
+              "score": 92
+            },
+            {
+              "player": "played mkwii twice in my life",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 650548545723564073,
+              "ally": false,
+              "score": 58
+            },
+            {
+              "player": "Spade",
+              "role": "Runner",
+              "bagger": false,
+              "discord_id": 159804107459133440,
+              "ally": false,
+              "score": 94
+            },
+            {
+              "player": "Joyfulsinger",
+              "role": "Bagger",
+              "bagger": true,
+              "discord_id": 730849077826158732,
+              "ally": false,
+              "score": 13
+            }
+          ],
+          "penalties": -20
+        }
+      },
+      "result_id": "2ec2f1db-9f20-4eab-b80c-d09a033a0985",
+      "completed_at": "2026-07-08T23:31:54.670984",
+      "table_bot_synced": false
+    }
+  ]
+}

@@ -15,6 +15,21 @@ print("Environment:", PROJECT_ENV)
 print("DEV MODE:", DEV)
 
 
+def _load_lounge_api_key() -> None:
+    from utils.lounge_api import set_lounge_api_key
+
+    # Prefer .env.local override for local testing; otherwise GCP Secret Manager.
+    key = os.getenv("LOUNGE_API_KEY", "").strip()
+    if not key:
+        try:
+            key = get_secret("lounge_api_key")
+        except Exception as exc:
+            print(f"⚠️ Lounge API key not loaded ({exc}).")
+            return
+    set_lounge_api_key(key)
+    print("Lounge API key configured.")
+
+
 # ---------------------------
 # Secrets Helpers
 # ---------------------------
@@ -149,9 +164,13 @@ async def on_startup():
 # Run
 # ---------------------------
 if __name__ == "__main__":
+    _load_lounge_api_key()
     bot.load_extension("cogs.setup")
     bot.load_extension("cogs.team")
+    bot.load_extension("cogs.profile")
     bot.load_extension("cogs.queue")
+    bot.load_extension("cogs.war_commands")
+    bot.load_extension("cogs.help")
     bot.load_extension("cogs.queue_interactions")
     bot.load_extension("cogs.war_view")
     bot.load_extension("cogs.war_interactions")

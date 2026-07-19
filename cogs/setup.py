@@ -31,10 +31,15 @@ class ServerSetup(Extension):
         opt_type=OptionType.STRING,
         choices=[
             SlashCommandChoice(name="Check current setup", value="check"),
-            SlashCommandChoice(name="Link this channel as RT wars", value="link_rt"),
-            SlashCommandChoice(name="Link this channel as CT wars", value="link_ct"),
+            SlashCommandChoice(name="Link this channel as RT ranked", value="link_rt_ranked"),
+            SlashCommandChoice(name="Link this channel as RT casual", value="link_rt_casual"),
+            SlashCommandChoice(name="Link this channel as CT ranked", value="link_ct_ranked"),
+            SlashCommandChoice(name="Link this channel as CT casual", value="link_ct_casual"),
             SlashCommandChoice(name="Link this channel as team queue", value="link_queue"),
-            SlashCommandChoice(name="Create category (RT, CT, queue, how-to-use)", value="create_category"),
+            SlashCommandChoice(
+                name="Create category (4 boards + queue + how-to-use)",
+                value="create_category",
+            ),
             SlashCommandChoice(name="Unlink setup", value="unlink"),
         ],
     )
@@ -84,24 +89,37 @@ class ServerSetup(Extension):
             await ctx.send(embeds=embed, ephemeral=True)
             return
 
-        if action in ("link_rt", "link_ct", "link_queue"):
-            if action == "link_rt":
-                field, label = "rt_channel_id", "RT wars"
-            elif action == "link_ct":
-                field, label = "ct_channel_id", "CT wars"
-            else:
-                field, label = "queue_channel_id", "Team queue"
-            upsert_guild_config(
-                guild_id,
-                guild_name,
-                **{field: ctx.channel_id},
-            )
+        link_actions = {
+            "link_rt_ranked": {
+                "fields": {"rt_ranked_channel_id": ctx.channel_id, "rt_channel_id": ctx.channel_id},
+                "label": "RT ranked",
+            },
+            "link_rt_casual": {
+                "fields": {"rt_casual_channel_id": ctx.channel_id},
+                "label": "RT casual",
+            },
+            "link_ct_ranked": {
+                "fields": {"ct_ranked_channel_id": ctx.channel_id, "ct_channel_id": ctx.channel_id},
+                "label": "CT ranked",
+            },
+            "link_ct_casual": {
+                "fields": {"ct_casual_channel_id": ctx.channel_id},
+                "label": "CT casual",
+            },
+            "link_queue": {
+                "fields": {"queue_channel_id": ctx.channel_id},
+                "label": "Team queue",
+            },
+        }
+        if action in link_actions:
+            link = link_actions[action]
+            upsert_guild_config(guild_id, guild_name, **link["fields"])
             config = get_guild_config(guild_id)
             embed = build_setup_embed(
                 guild_name,
                 config,
                 title="Channel linked",
-                description=f"{label} will use {ctx.channel.mention}.",
+                description=f"{link['label']} will use {ctx.channel.mention}.",
             )
             await ctx.send(embeds=embed, ephemeral=True)
             return

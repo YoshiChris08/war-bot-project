@@ -71,7 +71,7 @@ def build_war_embed(war: Dict[str, Any]) -> interactions.Embed:
     else:
         embed.add_field(
             name="📊 Team rank",
-            value=format_average_rank(lineup),
+            value=format_average_rank(lineup, war_type),
             inline=False,
         )
 
@@ -241,50 +241,137 @@ def build_setup_embed(
 def build_how_to_use_embed() -> interactions.Embed:
     embed = interactions.Embed(
         title="How to use War Bot",
-        description="MKWii 5v5 war matchmaking — team queue → hub billboard.",
+        description="MKWii 5v5 war matchmaking.",
         color=COLORS["default"],
     )
     embed.add_field(
-        name="1 · One-time server setup (admin)",
+        name="Quick start",
         value=(
-            "• `/team` → **Register team** — links this Discord to your team\n"
-            "• `/setup` → **Create category** — makes RT/CT billboards + team queue channels\n"
-            "• Or use `/setup` → **Link …** to point at existing channels"
+            "1. Admin: `/team` then `/setup`\n"
+            "2. Everyone: `/profile link` (Lounge auto-links or enter FC)\n"
+            "3. Captain: `/queue start` → teammates join lobby → `/queue post`\n"
+            "4. Hub: allies join or teams request a match\n"
+            "5. Matched: talk in `war-vs-*`, finish with `/war complete` + RXX"
         ),
         inline=False,
     )
     embed.add_field(
-        name="2 · Start a war search (captain)",
-        value=(
-            "• `/queue` → **Start queue** — pick RT or CT; **ranked by default**, choose casual if needed\n"
-            "• A lobby posts in **team-queue** — teammates click **Join as Runner** / **Join as Bagger**\n"
-            "• Need **at least 1 bagger** before posting to the hub"
-        ),
+        name="More detail",
+        value="`/help queue` · `/help war` · `/help billboard` · `/help setup`",
         inline=False,
+    )
+    embed.set_footer(text="War Bot")
+    return embed
+
+
+def build_profile_embed(
+    *,
+    display_name: str,
+    discord_id: int,
+    avatar_url: Optional[str] = None,
+    profile: Optional[Dict[str, Any]] = None,
+    player: Optional[Dict[str, Any]] = None,
+    team: Optional[Dict[str, Any]] = None,
+    team_mmr: Optional[int] = None,
+    recent: Optional[List[Dict[str, Any]]] = None,
+) -> interactions.Embed:
+    from utils.player_store import DEFAULT_PLAYER_MMR, get_player
+
+    profile = profile or {}
+    player = player or get_player(discord_id)
+    ratings = player.get("ratings") or {}
+    record = player.get("record") or {}
+
+    lounge_name = profile.get("lounge_name")
+    title_name = "Profile — " + (lounge_name if lounge_name else display_name)
+    embed = interactions.Embed(
+        title=f"{title_name}",
+        description=(
+            f"<@{discord_id}>"
+            + (f" · Lounge **{lounge_name}**" if lounge_name else " · Not linked to Lounge")
+        ),
+        color=COLORS["default"],
+    )
+    if avatar_url:
+        embed.set_thumbnail(url=avatar_url)
+
+    fc = profile.get("friend_code") or "Not linked"
+    source = profile.get("link_source")
+    fc_line = f"`{fc}`"
+    embed.add_field(name="Friend code", value=fc_line, inline=False)
+
+    def _cell(track: str, role: str) -> str:
+        mmr = int((ratings.get(track) or {}).get(role, DEFAULT_PLAYER_MMR))
+        rec = (record.get(track) or {}).get(role) or {}
+        w = int(rec.get("wins", 0))
+        l = int(rec.get("losses", 0))
+        return f"`{mmr:,}` · {w}W–{l}L"
+
+    embed.add_field(
+        name="RT ratings",
+        value=(
+            f"**Runner** {_cell('rt', 'runner')}\n"
+            f"**Bagger** {_cell('rt', 'bagger')}"
+        ),
+        inline=True,
     )
     embed.add_field(
-        name="3 · Hub billboard",
+        name="CT ratings",
         value=(
-            "• Captain uses **Post to Billboard** (or `/queue` → **Post to hub billboard**)\n"
-            "• **Looking For Allies** — fill toward 5/5; teammates can still join in team-queue\n"
-            "• **Looking For Opponents** — only when **5/5** with a bagger; other teams **Request Match** (you accept)\n"
-            "• After accept: use **`/queue` in the `war-vs-*` channel** — `complete`, `submit-scores`, `confirm`, `cancel-match`\n"
-            "• Score line: `p1 p2 p3 p4 bagger penalties` (space separated; penalties optional)\n"
-            "• **Ranked:** rt-ranked-wars / ct-ranked-wars (default)\n"
-            "• **Casual:** rt-casual-wars / ct-casual-wars"
+            f"**Runner** {_cell('ct', 'runner')}\n"
+            f"**Bagger** {_cell('ct', 'bagger')}"
         ),
-        inline=False,
+        inline=True,
     )
+
+    overall_w = int(player.get("wins", 0))
+    overall_l = int(player.get("losses", 0))
     embed.add_field(
-        name="4 · Useful commands",
-        value=(
-            "• `/queue-status` — your lobby + hub post\n"
-            "• `/war-view` — your billboard post\n"
-            "• `/team` → **View team info**"
-        ),
-        inline=False,
+        name="Overall",
+        value=f"**{overall_w}W – {overall_l}L**",
+        inline=True,
     )
-    embed.set_footer(text="War Bot · Questions? Ask your server admin.")
+
+    if team:
+        team_line = f"**{team.get('name', 'Unknown')}**"
+        if team_mmr is not None:
+            team_line += f"\nTeam MMR avg `~{team_mmr:,}`"
+        embed.add_field(name="Team", value=team_line, inline=False)
+    else:
+        embed.add_field(
+            name="Team",
+            value="_No team registered in this server_",
+            inline=False,
+        )
+
+    recent = recent or []
+    if recent:
+        lines = []
+        for row in recent:
+            outcome = row.get("player_outcome", "?")
+            war_type = str(row.get("war_type", "RT")).upper()
+            mode = str(row.get("mode", "ranked")).title()
+            if outcome == "W":
+                opponent = row.get("loser_team_name", "Unknown")
+                sign = "+"
+            else:
+                opponent = row.get("winner_team_name", "Unknown")
+                sign = "−"
+            margin = row.get("point_margin", "?")
+            entry = row.get("player_entry") or {}
+            role = "Bag" if (entry.get("bagger") or entry.get("role") == "Bagger") else "Run"
+            ally = " · ally" if entry.get("ally") else ""
+            delta = (row.get("player_mmr_deltas") or {}).get(str(discord_id))
+            delta_txt = f" · MMR `{delta:+d}`" if isinstance(delta, int) else ""
+            lines.append(
+                f"**{outcome}** {war_type} {mode} vs **{opponent}** "
+                f"({sign}{margin}) · {role}{ally}{delta_txt}"
+            )
+        embed.add_field(name="Recent wars", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(name="Recent wars", value="_No completed wars yet_", inline=False)
+
+    embed.set_footer(text="War Bot · /profile link to update FC")
     return embed
 
 
@@ -303,6 +390,10 @@ def build_match_request_embed(requester_war: Dict[str, Any]) -> interactions.Emb
     if mode == MODE_CASUAL:
         embed.add_field(name="👥 Their lineup", value=format_lineup(lineup), inline=False)
     else:
-        embed.add_field(name="📊 Their team rank", value=format_average_rank(lineup), inline=False)
+        embed.add_field(
+            name="📊 Their team rank",
+            value=format_average_rank(lineup, requester_war.get("war_type", "RT")),
+            inline=False,
+        )
     embed.set_footer(text="War Bot · Accept or decline below")
     return embed

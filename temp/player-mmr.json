@@ -1,0 +1,536 @@
+{
+  "players": {
+    "414031492147314688": {
+      "discord_id": 414031492147314688,
+      "mmr": 10004,
+      "wins": 1,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10016,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 1,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "284112499115294730": {
+      "discord_id": 284112499115294730,
+      "mmr": 10004,
+      "wins": 1,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10000,
+          "bagger": 10016
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 1,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "698994127005810729": {
+      "discord_id": 698994127005810729,
+      "mmr": 10009,
+      "wins": 2,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10036,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 2,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "636300423447445514": {
+      "discord_id": 636300423447445514,
+      "mmr": 10004,
+      "wins": 1,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10016,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 1,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "535940512440385550": {
+      "discord_id": 535940512440385550,
+      "mmr": 10005,
+      "wins": 2,
+      "losses": 1,
+      "ratings": {
+        "rt": {
+          "runner": 10016,
+          "bagger": 10004
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 1,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 1,
+            "losses": 1
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "82862780591378432": {
+      "discord_id": 82862780591378432,
+      "mmr": 9991,
+      "wins": 0,
+      "losses": 2,
+      "ratings": {
+        "rt": {
+          "runner": 9964,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 2
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "730849077826158732": {
+      "discord_id": 730849077826158732,
+      "mmr": 9991,
+      "wins": 0,
+      "losses": 2,
+      "ratings": {
+        "rt": {
+          "runner": 9984,
+          "bagger": 9980
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 1
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 1
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "309334590693179394": {
+      "discord_id": 309334590693179394,
+      "mmr": 9996,
+      "wins": 0,
+      "losses": 1,
+      "ratings": {
+        "rt": {
+          "runner": 9984,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 1
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "650548545723564073": {
+      "discord_id": 650548545723564073,
+      "mmr": 9991,
+      "wins": 0,
+      "losses": 2,
+      "ratings": {
+        "rt": {
+          "runner": 9964,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 2
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "1383235279506243625": {
+      "discord_id": 1383235279506243625,
+      "mmr": 10005,
+      "wins": 1,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10020,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 1,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "1105487599310745660": {
+      "discord_id": 1105487599310745660,
+      "mmr": 10005,
+      "wins": 1,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10020,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 1,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "874430206725746688": {
+      "discord_id": 874430206725746688,
+      "mmr": 10005,
+      "wins": 1,
+      "losses": 0,
+      "ratings": {
+        "rt": {
+          "runner": 10020,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 1,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "882746313907777616": {
+      "discord_id": 882746313907777616,
+      "mmr": 9995,
+      "wins": 0,
+      "losses": 1,
+      "ratings": {
+        "rt": {
+          "runner": 9980,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 1
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    },
+    "159804107459133440": {
+      "discord_id": 159804107459133440,
+      "mmr": 9995,
+      "wins": 0,
+      "losses": 1,
+      "ratings": {
+        "rt": {
+          "runner": 9980,
+          "bagger": 10000
+        },
+        "ct": {
+          "runner": 10000,
+          "bagger": 10000
+        }
+      },
+      "record": {
+        "rt": {
+          "runner": {
+            "wins": 0,
+            "losses": 1
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        },
+        "ct": {
+          "runner": {
+            "wins": 0,
+            "losses": 0
+          },
+          "bagger": {
+            "wins": 0,
+            "losses": 0
+          }
+        }
+      }
+    }
+  }
+}

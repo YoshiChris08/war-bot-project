@@ -93,6 +93,10 @@ def create_pending_collecting_scores(
     point_margin: int,
     reporter_discord_id: int,
     session_id: Optional[str] = None,
+    *,
+    rxx: Optional[str] = None,
+    manual_fallback: bool = False,
+    fallback_reason: Optional[str] = None,
 ) -> Dict[str, Any]:
     pending = _base_pending(
         board, reporter_war, opponent_war, winner_war_id, point_margin, reporter_discord_id, session_id
@@ -101,8 +105,10 @@ def create_pending_collecting_scores(
         {
             "status": "collecting_scores",
             "sync_method": "player_scores",
-            "rxx": None,
+            "rxx": rxx,
             "team_scores": {},
+            "manual_fallback": manual_fallback,
+            "fallback_reason": fallback_reason,
         }
     )
     data = _load_all()
@@ -118,6 +124,17 @@ def upsert_team_scores(completion_id: str, war_id: str, team_entry: Dict[str, An
         return None
     scores = pending.setdefault("team_scores", {})
     scores[war_id] = team_entry
+    data["pending"][completion_id] = pending
+    _save_all(data)
+    return pending
+
+
+def clear_team_scores(completion_id: str) -> Optional[Dict[str, Any]]:
+    data = _load_all()
+    pending = data["pending"].get(completion_id)
+    if not pending or pending.get("status") != "collecting_scores":
+        return None
+    pending["team_scores"] = {}
     data["pending"][completion_id] = pending
     _save_all(data)
     return pending
